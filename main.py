@@ -1,6 +1,13 @@
 import sqlite3
 
 
+def error(state):
+    if state == "empty":
+        print("There is no book")
+    if state == "option":
+        print("Option not supported")
+
+
 class Library:
     def __init__(self):
         self.con = sqlite3.connect("library.db")
@@ -12,16 +19,24 @@ class Library:
             self.cur.execute("INSERT INTO book VALUES (?, ?)", (title, status))
             self.con.commit()
         elif action == "delete":
-            self.cur.execute("DELETE FROM book WHERE title = ?", (title,))
-            self.con.commit()
+            delete = self.cur.execute("DELETE FROM book WHERE title = ?", (title,))
+            if delete.rowcount == 0:
+                error("empty")
+            else:
+                self.con.commit()
         elif action == "update":
-            self.cur.execute(
+            update = self.cur.execute(
                 "UPDATE book SET status = ? WHERE title = ?", (status, title)
             )
-            self.con.commit()
+            if update.rowcount == 0:
+                error("empty")
+            else:
+                self.con.commit()
+        else:
+            error("option")
 
     def show_book(self, status=None):
-        print("Read book:\n=========")
+        print("Collection:\n=========")
         if status:
             self.cur.execute(
                 "SELECT title, status FROM book WHERE status = ?", (status,)
@@ -29,6 +44,8 @@ class Library:
         else:
             self.cur.execute("SELECT title, status FROM book")
         books = self.cur.fetchall()
+        if not books:
+            error("empty")
         for book in books:
             print(f"Title: {book[0]}\nStatus: {book[1]}")
             print("---------")
@@ -48,21 +65,18 @@ def main():
                 title = input("Title: ")
                 status = input("Status: ")
                 library.modify_book("add", title, status)
-
             elif option_modify == "delete":
                 book_to_delete = input("Delete book: ")
                 library.modify_book("delete", book_to_delete, status=None)
-
             elif option_modify == "update":
                 title = input("Update book: ")
                 status = input("Status: ")
                 library.modify_book("update", title, status)
-
             elif option_modify == "exit":
                 library.close()
                 break
             else:
-                print("Option not supported")
+                error("option")
         elif option_general == "display":
             option_display = input("What you want to display: all/read/unread: ")
             if option_display == "all":
@@ -79,7 +93,7 @@ def main():
             library.close()
             break
         else:
-            print("Option not supported")
+            error("option")
     library.close()
 
 
